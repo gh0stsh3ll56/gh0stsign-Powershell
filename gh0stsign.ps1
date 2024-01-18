@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param (
     [Parameter(Mandatory = $true)]
     [string]$Path,
@@ -29,15 +29,23 @@ function Check-FileSecurity {
 
     Write-Verbose "Checking file: $FilePath"
     $fileInfo = Get-Item $FilePath
-    $signature = Get-AuthenticodeSignature $FilePath
     $fileSecurity = Get-Acl $FilePath
-
     $securityProperties = $fileSecurity | Select-Object -ExpandProperty Access | Out-String
+    
+    try {
+        $signature = Get-AuthenticodeSignature $FilePath
+        $signStatus = if ($signature.Status -ne 'NotSigned') { $signature.Status } else { "Not Signed" }
+        $signSubject = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { "N/A" }
+    } catch {
+        Write-Warning "Unable to access file: $FilePath. It may be in use by another process."
+        $signStatus = "Access Denied"
+        $signSubject = "Access Denied"
+    }
 
     $fileSecurityDetails = @{
         Path              = $fileInfo.FullName
-        IsSigned          = $signature.Status -ne 'NotSigned'
-        Signature         = if ($signature.Status -ne 'NotSigned') { $signature.SignerCertificate.Subject } else { "N/A" }
+        SignatureStatus   = $signStatus
+        SignatureSubject  = $signSubject
         SecurityProperties = $securityProperties.Trim()
     }
 
@@ -50,36 +58,45 @@ function Generate-Report {
     )
 
     Write-Verbose "Generating report..."
-    $signedFiles = $FileSecurities | Where-Object { $_.IsSigned -eq $true }
-    $unsignedFiles = $FileSecurities | Where-Object { $_.IsSigned -eq $false }
+    $signedFiles = $FileSecurities | Where-Object { $_.SignatureStatus -ne 'Not Signed' }
+    $unsignedFiles = $FileSecurities | Where-Object { $_.SignatureStatus -eq 'Not Signed' }
     $totalFiles = $FileSecurities.Count
+    $filesWithIssues = $FileSecurities | Where-Object { $_.SignatureStatus -eq 'Access Denied' }
+
+    $signedCount = $signedFiles.Count
+    $unsignedCount = $unsignedFiles.Count
+    $filesWithIssuesCount = $filesWithIssues.Count
 
     $extensionGroups = $FileSecurities | Group-Object { [System.IO.Path]::GetExtension($_.Path) }
 
-    $report = @(
-        "Total Files: $totalFiles`r`n",
-        "Signed Files: $($signedFiles.Count)`r`n",
-        "Unsigned Files: $($unsignedFiles.Count)`r`n",
-        "File Extensions Summary:`r`n"
-    )
+    $report = "File Security Report`n"
+    $report += "=" * 20 + "`n"
+    $report += "Total Files Scanned: $totalFiles`n"
+    $report += "Number of Unsigned Files: $unsignedCount`n"
+    $report += "Number of Files with Issues: $filesWithIssuesCount`n"
+    $report += "`nUnsigned Files:`n"
+    $report += "=" * 20 + "`n"
 
+    foreach ($file in $unsignedFiles) {
+        $report += "File: $($file.Path)`n"
+    }
+
+    $report += "`nFiles with Issues:`n"
+    $report += "=" * 20 + "`n"
+    foreach ($file in $filesWithIssues) {
+        $report += "File: $($file.Path)`n"
+    }
+
+    $report += "`nFile Extensions Summary:`n"
+    $report += "=" * 20 + "`n"
     foreach ($group in $extensionGroups) {
-        $report += "Extension $($group.Name): $($group.Count) Files`r`n"
-    }
-
-    $report += "`r`nSecurity Properties:`r`n"
-    foreach ($fileSecurity in $FileSecurities) {
-        $report += "`r`nPath: $($fileSecurity.Path)`r`nSecurity Properties:`r`n$($fileSecurity.SecurityProperties)`r`n"
-    }
-
-    $report += "`r`nUnsigned Files with Location:`r`n"
-    foreach ($fileSecurity in $unsignedFiles) {
-        $report += "Path: $($fileSecurity.Path)`r`n"
+        $report += "Extension $($group.Name): $($group.Count) Files`n"
     }
 
     Set-Content -Path $ReportPath -Value $report
     Write-Host "Report generated at $ReportPath"
 }
+
 
 Display-Menu
 
