@@ -1,24 +1,17 @@
-# gh0stsign-Powershell
-Powershell Script to enumerate directories or files to view permissions and file signing property.
+# gh0stedPowershell
 
-REQUIREMENTS FOR POWERSHELL SCRIPT
+Powershell scripts that will conduct checks to identify misconfigurations or potential internal vulnerabilites against file paths.
 
-Operating System:
-- Windows 10 or later
+gh0stasr.ps1: Conducts checks that helps conduct Attack surface reducting. The script identifies open ports, API's, and endpoints that are used based on the files being hosted internally from the file path.
 
-PowerShell Version:
-- Windows PowerShell 5.1 or later
-- PowerShell Core 6.0 or later (Optional, for cross-platform compatibility)
+gh0stdllhijacking: Conducts searches on directory paths internally to identify potential dllhijacking.
 
-User Permissions:
-- Script must be run with a user account that has read access to the target directory and files.
-- Administrative privileges may be required for accessing certain system directories or files.
+gh0stpermissions: Conducts checks on the file permissions based on the directory provided to find misconfigurations.
 
-Additional Notes:
-- No external modules or packages are required.
-- Ensure Execution Policy in PowerShell allows script execution (use 'Set-ExecutionPolicy' cmdlet if needed).
+gh0stsign: conducts checks on the directory or file provided to identify security risks of unsigned files
 
-Usage:
-- Save the script as 'YourScriptName.ps1'.
-- Run the script in PowerShell with required parameters:
-  .\gh0stsign.ps1 -Path "C:\path\to\directory" -ReportPath "C:\path\to\report.txt"
+gh0ststrings: Scans directories and craws file directories to look for potential secrets.
+
+ghostpath: scans internal direcotry paths looking for misconfigurations and vulnerabilities.
+
+ghostsecurity: conducts common checks on the file paths presented looking for common security issues. If an endpoint is identifed, curl commands will be ran against it to check for potenial low hanging fruit vulnerabilites. 
